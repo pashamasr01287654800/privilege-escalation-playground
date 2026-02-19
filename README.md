@@ -57,7 +57,7 @@ Each level simulates a **real mistake commonly found in corporate Linux environm
 ## 🚀 Installation
 
 ```bash
-git clone https://github.com/pashamasr01287654800/enterprise-privesc-lab.git
+git clone https://github.com/pashamasr01287654800/privilege-escalation-playground.git
 cd enterprise-privesc-lab
 chmod +x lab.sh
 sudo ./lab.sh
