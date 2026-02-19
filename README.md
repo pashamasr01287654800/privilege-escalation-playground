@@ -25,28 +25,6 @@ A **realistic, multi-level Linux privilege escalation lab** designed for Red Tea
 **Entry Point:** `user1`  
 **Goal:** `root`
 
-Each level simulates a **real mistake commonly found in corporate Linux environments**.
-
-| Level | Technique |
-|------|----------|
-| L1 | sudo abuse + sensitive logs |
-| L2 | backup credential leaks |
-| L3 | SUID binary abuse |
-| L4 | cron job injection |
-| L5 | sudo tar abuse |
-| L6 | sudo find abuse |
-| L7 | Linux capabilities |
-| L8 | sudo env abuse |
-| L9 | sudo tar privilege escalation |
-| L10 | sudo less escape |
-| L11 | SUID bash |
-| L12 | sudo awk abuse |
-| L13 | systemd service abuse |
-| L14 | sudo tar (advanced) |
-| L15 | root flag |
-
----
-
 ## ⚙️ Requirements
 
 - Linux system (VM recommended)
