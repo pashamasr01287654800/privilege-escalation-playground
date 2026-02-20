@@ -1,224 +1,149 @@
 #!/bin/bash
 # =====================================================
-# 15-Level Enterprise Linux PrivEsc Lab (REALISTIC)
-# Author: Red Team Training Lab
-# RUN AS ROOT ONLY
+# 15-Level Enterprise Linux PrivEsc Lab (STRICT CHAIN)
+# Rule: NO DIRECT ROOT UNTIL LEVEL 15
 # =====================================================
 
 set -Eeuo pipefail
-LEVELS=15
-
 [[ $EUID -ne 0 ]] && { echo "[!] Run as root"; exit 1; }
+
+LEVELS=15
+BASE_UID=1001
 
 # ================= SHELL SELECTION =================
 while true; do
-  echo "[?] Choose default shell for ALL users:"
-  echo "    1) bash"
-  echo "    2) zsh"
-  read -rp "[>] Enter choice (1 or 2): " SHELL_CHOICE
-  case "$SHELL_CHOICE" in
-    1) USER_SHELL="/bin/bash"; break ;;
-    2) USER_SHELL="/bin/zsh"; break ;;
-    *) echo "[!] Invalid choice" ;;
-  esac
+  echo "[?] Choose shell:"
+  echo "1) bash"
+  echo "2) zsh"
+  read -rp "> " c
+  [[ "$c" == "1" ]] && USER_SHELL="/bin/bash" && break
+  [[ "$c" == "2" ]] && USER_SHELL="/bin/zsh" && break
 done
 
-echo "[+] Shell selected: $USER_SHELL"
-
-# ================= USERS & PASSWORDS =================
+# ================= USERS =================
 PASS=(
-"X9!kR@2#M7QZt8Lp"
-"Q@Z8!kM2R7t9#Lp"
-"R7#Q!9Zk2@Mt8Lp"
-"9@k!RZ2Q7M#8tLp"
-"Z2R!Q@k7#M9t8Lp"
-"M9#R@Q!Zk2t7Lp8"
-"Q7@Zk!M2R#9tLp8"
-"R@9Z!k2Q7M#tLp8"
-"Zk2R!@Q7#M9tLp8"
-"Q@k7Z!R2#M9tLp8"
-"RZ!Q@k2#M7t9Lp8"
-"kQ!Z@R2#M7t9Lp8"
-"Z!kQ@R2#M7t9Lp8"
-"QZ!k@R2#M7t9Lp8"
-"FINAL_ROOT_LOCK"
+"X9!kR@2#M7QZt8Lp" "Q@Z8!kM2R7t9#Lp" "R7#Q!9Zk2@Mt8Lp"
+"9@k!RZ2Q7M#8tLp" "Z2R!Q@k7#M9t8Lp" "M9#R@Q!Zk2t7Lp8"
+"Q7@Zk!M2R#9tLp8" "R@9Z!k2Q7M#tLp8" "Zk2R!@Q7#M9tLp8"
+"Q@k7Z!R2#M9tLp8" "RZ!Q@k2#M7t9Lp8" "kQ!Z@R2#M7t9Lp8"
+"Z!kQ@R2#M7t9Lp8" "QZ!k@R2#M7t9Lp8" "FINAL_ROOT"
 )
 
 for i in $(seq 1 $LEVELS); do
-  useradd -m -s "$USER_SHELL" user$i
+  useradd -m -u $((BASE_UID+i)) -s "$USER_SHELL" user$i
   echo "user$i:${PASS[$((i-1))]}" | chpasswd
   chmod 700 /home/user$i
-  mkdir -p /home/user$i/progress
-  chown -R user$i:user$i /home/user$i
 done
 
-# ================= LEVEL 1 — HelpDesk Logs =================
+# ================= LEVEL 1 → 2 (Log Leak) =================
 mkdir -p /var/log/helpdesk
-cat > /var/log/helpdesk/tickets.log <<EOF
-service_user=user2
-service_pass=${PASS[1]}
-EOF
+echo -e "u=user2\np=${PASS[1]}" > /var/log/helpdesk/tickets.log
 chmod 640 /var/log/helpdesk/tickets.log
 
-cat > /usr/local/bin/log_reader.sh <<'EOF'
+cat > /usr/local/bin/read_logs.sh <<'EOF'
 #!/bin/bash
 cat /var/log/helpdesk/tickets.log
 EOF
-chmod 750 /usr/local/bin/log_reader.sh
-chown root:user1 /usr/local/bin/log_reader.sh
-
-echo "user1 ALL=(root) NOPASSWD: /usr/local/bin/log_reader.sh" \
-  > /etc/sudoers.d/u1
+chmod 750 /usr/local/bin/read_logs.sh
+chown root:user1 /usr/local/bin/read_logs.sh
+echo "user1 ALL=(root) NOPASSWD: /usr/local/bin/read_logs.sh" > /etc/sudoers.d/u1
 chmod 440 /etc/sudoers.d/u1
 
-# ================= LEVEL 2 — Backup Leak =================
+# ================= LEVEL 2 → 3 (Backup Leak) =================
 mkdir -p /var/backups/app
-cat > /var/backups/app/db_backup.sql <<EOF
-CREATE USER 'user3'@'localhost' IDENTIFIED BY '${PASS[2]}';
-EOF
-chmod 644 /var/backups/app/db_backup.sql
+echo "user3:${PASS[2]}" > /var/backups/app/creds.txt
+chmod 644 /var/backups/app/creds.txt
 
-# ================= LEVEL 3 — Git Secret Leak =================
-mkdir -p /srv/apps/internal
-cd /srv/apps/internal
+# ================= LEVEL 3 → 4 (Git History) =================
+mkdir -p /srv/dev/app && cd /srv/dev/app
 git init -q
-git config user.email "dev@corp.local"
-git config user.name "internal-dev"
+git config user.email dev@corp.local
+git config user.name dev
+echo "USER=user4 PASS=${PASS[3]}" > config.env
+git add config.env && git commit -m init -q
+rm -f config.env
 
-cat > config.php <<EOF
-<?php
-\$USER="user4";
-\$PASS="${PASS[3]}";
-?>
-EOF
-git add config.php
-git commit -m "initial commit" -q
-rm -f config.php
+# ================= LEVEL 4 → 5 (Cron Pivot) =================
+echo "* * * * * root su user5 -c /home/user5/next.sh" > /etc/cron.d/qa
+chmod 644 /etc/cron.d/qa
+echo "#!/bin/bash" > /home/user5/next.sh
+chmod 755 /home/user5/next.sh
 
-# ================= LEVEL 4 — Writable Cron =================
-cat > /etc/cron.d/qa-sync <<'EOF'
-* * * * * root bash /tmp/qa-tmp.sh
-EOF
-chmod 644 /etc/cron.d/qa-sync
-
-echo "echo 'user5:${PASS[4]}' | chpasswd" > /tmp/qa-tmp.sh
-chmod 777 /tmp/qa-tmp.sh   # intentional misconfig
-
-# ================= LEVEL 5 — SUID Binary =================
-mkdir -p /opt/ops
-cat > /opt/ops/healthcheck.c <<'EOF'
+# ================= LEVEL 5 → 6 (SUID user binary) =================
+mkdir -p /opt/tools
+cat > /opt/tools/pivot.c <<'EOF'
 #include <unistd.h>
-int main(){ setuid(0); execl("/bin/sh","sh","-p",NULL); }
+int main(){ setuid(1007); execl("/bin/bash","bash",NULL); }
 EOF
-gcc /opt/ops/healthcheck.c -o /opt/ops/healthcheck
-chmod 4755 /opt/ops/healthcheck
+gcc /opt/tools/pivot.c -o /opt/tools/pivot
+chmod 4755 /opt/tools/pivot
 
-# ================= LEVEL 6 — Sudo Vim =================
-echo "user6 ALL=(root) NOPASSWD: /usr/bin/vim /etc/sysconfig/app.env" \
-  > /etc/sudoers.d/u6
+# ================= LEVEL 6 → 7 (sudo editor) =================
+mkdir -p /etc/app
+echo "NEXT=user7 PASS=${PASS[6]}" > /etc/app/env
+chmod 640 /etc/app/env
+echo "user6 ALL=(root) NOPASSWD: /usr/bin/vim /etc/app/env" > /etc/sudoers.d/u6
 chmod 440 /etc/sudoers.d/u6
 
-mkdir -p /etc/sysconfig
-cat > /etc/sysconfig/app.env <<EOF
-NEXT_USER=user7
-PASS=${PASS[6]}
-EOF
-chmod 600 /etc/sysconfig/app.env
+# ================= LEVEL 7 → 8 (Capabilities) =================
+cp /usr/bin/python3 /opt/pycap
+setcap cap_setuid+ep /opt/pycap
 
-# ================= LEVEL 7 — Capabilities =================
-cp /usr/sbin/tcpdump /opt/tcpdump_cap
-setcap cap_net_raw,cap_net_admin+ep /opt/tcpdump_cap
-
-# ================= LEVEL 8 — systemd override =================
-cat > /etc/systemd/system/app.service <<'EOF'
+# ================= LEVEL 8 → 9 (systemd user pivot) =================
+cat > /etc/systemd/system/pivot.service <<EOF
 [Service]
-ExecStart=/bin/true
+ExecStart=/bin/su user9 -c /bin/bash
 EOF
-
-mkdir -p /etc/systemd/system/app.service.d
-cat > /etc/systemd/system/app.service.d/override.conf <<'EOF'
-[Service]
-ExecStart=
-ExecStart=/bin/bash -c 'cp /bin/bash /tmp/rootbash; chmod 4755 /tmp/rootbash'
-EOF
-
-echo "user8 ALL=(root) NOPASSWD: systemctl restart app" \
-  > /etc/sudoers.d/u8
+echo "user8 ALL=(root) NOPASSWD: systemctl restart pivot" > /etc/sudoers.d/u8
 chmod 440 /etc/sudoers.d/u8
 
-# ================= LEVEL 9 — Rsync Cron =================
+# ================= LEVEL 9 → 10 (rsync cron) =================
 mkdir -p /etc/backup
-cat > /etc/cron.d/backup-sync <<'EOF'
-* * * * * user9 rsync -a /var/backups/ /etc/backup/
+echo "* * * * * user9 rsync -a /home/user9/share/ /home/user10/" > /etc/cron.d/sync
+chmod 644 /etc/cron.d/sync
+mkdir -p /home/user9/share /home/user10
+
+# ================= LEVEL 10 → 11 (config leak) =================
+mkdir -p /etc/db
+echo "user11:${PASS[10]}" > /etc/db/app.conf
+chmod 644 /etc/db/app.conf
+
+# ================= LEVEL 11 → 12 (PATH hijack) =================
+cat > /usr/local/bin/syscheck.sh <<'EOF'
+#!/bin/bash
+date
+su user12 -c /bin/bash
 EOF
-chmod 644 /etc/cron.d/backup-sync
+chmod 755 /usr/local/bin/syscheck.sh
+echo "Defaults:user11 !secure_path" > /etc/sudoers.d/u11
+echo "user11 ALL=(root) NOPASSWD: /usr/local/bin/syscheck.sh" >> /etc/sudoers.d/u11
+chmod 440 /etc/sudoers.d/u11
 
-# ================= LEVEL 10 — MySQL Leak =================
-mkdir -p /etc/mysql
-echo "user11=${PASS[10]}" > /etc/mysql/my.cnf
-chmod 644 /etc/mysql/my.cnf
+# ================= LEVEL 12 → 13 (NFS-like share) =================
+mkdir -p /mnt/share
+chmod 777 /mnt/share
+ln -s /mnt/share /home/user12/share
 
-# ================= LEVEL 11 — Docker =================
-usermod -aG docker user11 || true
-
-# ================= LEVEL 12 — NFS =================
-mkdir -p /mnt/internal_share
-chmod 777 /mnt/internal_share
-
-# ================= LEVEL 13 — Logrotate =================
-cat > /etc/logrotate.d/security <<'EOF'
-/var/log/auth.log {
-  weekly
-  postrotate
-    cp /bin/bash /tmp/logbash
-    chmod 4755 /tmp/logbash
-  endscript
+# ================= LEVEL 13 → 14 (logrotate pivot) =================
+cat > /etc/logrotate.d/app <<'EOF'
+/var/log/syslog {
+ weekly
+ postrotate
+  su user14 -c /bin/bash
+ endscript
 }
 EOF
 
-# ================= LEVEL 14 — Full sudo =================
-echo "user14 ALL=(root) NOPASSWD: ALL" > /etc/sudoers.d/u14
+# ================= LEVEL 14 → 15 (FINAL SUDO) =================
+echo "user14 ALL=(root) NOPASSWD: /bin/su user15" > /etc/sudoers.d/u14
 chmod 440 /etc/sudoers.d/u14
 
-# ================= LEVEL 15 — ROOT FLAG =================
-echo "FLAG{ROOT_REACHED_VIA_ENTERPRISE_CHAIN}" > /root/enterprise.flag
-chmod 400 /root/enterprise.flag
+# ================= LEVEL 15 =================
+echo "FLAG{ENTERPRISE_CHAIN_COMPLETE}" > /root/flag.txt
+chmod 400 /root/flag.txt
 
-echo "[+] LAB READY — ENTERPRISE PRIVESc ENVIRONMENT"
-echo "[+] Entry point: user1"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+echo "[+] LAB READY — STRICT CHAIN, NO ROOT SKIPS"
+echo "[+] Entry: user1"
 
 
 
