@@ -493,21 +493,6 @@ Contributions are welcome! Here's how you can help:
 
 ---
 
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-```
-MIT License
-
-Copyright (c) 2024 Enterprise Linux PrivEsc Lab
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files...
-```
-
----
-
 ## ⚠️ Disclaimer
 
 **This lab is for educational purposes only.**
@@ -558,19 +543,3 @@ The techniques demonstrated in this lab should **ONLY** be used:
 - **Email**: [your-email@example.com]
 
 ---
-
-<p align="center">
-  <b>⭐ Star this repository if you found it useful! ⭐</b>
-</p>
-
-<p align="center">
-  <a href="#-enterprise-linux-privilege-escalation-lab">Back to Top</a>
-</p>
-
----
-
-<p align="center">
-  <i>Happy Hacking! Remember: With great power comes great responsibility.</i>
-  <br>
-  <img src="https://img.shields.io/badge/Made%20with-%E2%9D%A4%20by%20Security%20Enthusiasts-red">
-</p>
