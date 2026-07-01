@@ -113,14 +113,15 @@ During installation, you will be prompted to choose the default shell for lab us
 
 ---
 
-🧹 Cleanup
+📥 Install
 
-To completely remove the lab:
+To completely Install the lab:
 
 ```bash
 sudo ./lab.sh
-# then select option 2 from the menu
 ```
+# then select option 1 from the menu
+
 
 ---
 
