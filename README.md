@@ -122,12 +122,6 @@ sudo ./lab.sh
 # then select option 2 from the menu
 ```
 
-Or run directly:
-
-```bash
-sudo ./lab.sh cleanup
-```
-
 ---
 
 📄 File Structure
@@ -158,6 +152,12 @@ Contributions and suggestions are welcome! If you find a bug or want to add a ne
 Designed for educational purposes to teach privilege escalation techniques in a safe and legal environment. Use only on systems you own or have explicit permission to test.
 
 Happy hacking! 🚀
+
+
+
+
+
+
 
 
 
