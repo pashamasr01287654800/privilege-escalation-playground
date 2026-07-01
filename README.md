@@ -159,7 +159,7 @@ Designed for educational purposes to teach privilege escalation techniques in a 
 
 Happy hacking! 🚀
 
-```
+
 
 
 
