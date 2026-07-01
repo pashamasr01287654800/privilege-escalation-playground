@@ -1,4 +1,3 @@
-```markdown
 # 🏢 Enterprise Linux Privilege Escalation Lab (15 Levels)
 
 A **realistic, linear, enterprise-style Linux privilege escalation lab** designed for **Red Teamers, penetration testers, and security learners** who want to practice **real-world Linux misconfigurations** — not artificial CTF tricks.
@@ -161,6 +160,7 @@ Designed for educational purposes to teach privilege escalation techniques in a 
 Happy hacking! 🚀
 
 ```
+
 
 
 
