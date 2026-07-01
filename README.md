@@ -100,7 +100,7 @@ All scenarios reflect **real enterprise security failures**.
 
 ---
 
-## 🚀 Installation
+## 📥 Installation
 
 ```bash
 git clone https://github.com/pashamasr01287654800/privilege-escalation-playground.git
@@ -113,25 +113,6 @@ During installation, you will be prompted to choose the default shell for lab us
 
 ---
 
-📥 Install
-
-To completely Install the lab:
-
-```bash
-sudo ./lab.sh
-```
-# then select option 1 from the menu
-
-
----
-
-📄 File Structure
-
-· lab.sh – Main installer / cleaner script
-· /root/lab_passwords.txt – Passwords for all users (root only)
-· /root/flag.txt – Final flag
-
----
 
 📝 Tips for the Learner
 
@@ -153,13 +134,6 @@ Contributions and suggestions are welcome! If you find a bug or want to add a ne
 Designed for educational purposes to teach privilege escalation techniques in a safe and legal environment. Use only on systems you own or have explicit permission to test.
 
 Happy hacking! 🚀
-
-
-
-
-
-
-
 
 
 
