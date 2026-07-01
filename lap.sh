@@ -44,8 +44,8 @@ cleanup_lab() {
     # Confirm cleanup
     echo -e "${RED}[!] WARNING: This will delete ALL lab users, their home directories, and all lab files!${NC}"
     echo -e "${RED}[!] This action is IRREVERSIBLE!${NC}"
-    read -rp "  ➜ Type 'YES' to confirm deletion: " confirm
-    if [[ "$confirm" != "YES" ]]; then
+    read -rp "  ➜ Type 'yes' to confirm deletion: " confirm
+    if [[ "$confirm" != "yes" ]]; then
         echo -e "  ${GREEN}Cleanup cancelled.${NC}"
         return 0
     fi
