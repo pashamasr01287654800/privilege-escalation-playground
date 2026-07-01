@@ -40,6 +40,15 @@ declare -a PASS  # Array to store generated passwords
 # --- Cleanup Function: Removes all users, files, and directories created by the lab. ---
 cleanup_lab() {
     echo -e "\n${RED}[*] Starting Comprehensive Lab Cleanup...${NC}"
+    
+    # Confirm cleanup
+    echo -e "${RED}[!] WARNING: This will delete ALL lab users, their home directories, and all lab files!${NC}"
+    echo -e "${RED}[!] This action is IRREVERSIBLE!${NC}"
+    read -rp "  ➜ Type 'YES' to confirm deletion: " confirm
+    if [[ "$confirm" != "YES" ]]; then
+        echo -e "  ${GREEN}Cleanup cancelled.${NC}"
+        return 0
+    fi
 
     # 1. Kill any processes owned by lab users
     echo -e "${YELLOW}[*] Terminating any processes from lab users...${NC}"
@@ -47,21 +56,26 @@ cleanup_lab() {
         pkill -u "user$i" 2>/dev/null || true
     done
 
-    # 2. Remove lab directories and files
-    echo -e "${YELLOW}[*] Removing lab directories...${NC}"
+    # 2. Remove ALL lab directories and files
+    echo -e "${YELLOW}[*] Removing all lab files and directories...${NC}"
     rm -rf /opt/tools /opt/deployment /opt/scripts /srv/dev /var/log/helpdesk \
            /var/backups /usr/local/bin/python3-cap /usr/local/bin/monitor.sh \
            /usr/local/bin/system_rotate.sh /etc/app.conf /etc/db.conf \
-           /etc/passwd.bak "$PASSWORD_FILE" "$FLAG_FILE" \
-           /home/user*/.config /home/user*/.zshrc /home/user*/.zhistory \
-           /home/user6/pass.txt 2>/dev/null || true
+           /etc/passwd.bak "$PASSWORD_FILE" "$FLAG_FILE" 2>/dev/null || true
+    
+    # Remove all lab-specific files from home directories
+    for i in $(seq 1 $LEVELS); do
+        # Remove specific files
+        rm -f "/home/user$i/pass.txt" "/home/user$i/secret.txt" 2>/dev/null || true
+        rm -rf "/home/user$i/.config" "/home/user$i/.zshrc" "/home/user$i/.zhistory" 2>/dev/null || true
+    done
 
     # 3. Remove sudoers fragments
     echo -e "${YELLOW}[*] Removing sudoers.d entries...${NC}"
-    rm -f /etc/sudoers.d/u{1,3,4,5,6,7,11,14,15} 2>/dev/null || true
+    rm -f /etc/sudoers.d/u{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15} 2>/dev/null || true
 
     # 4. Delete the lab users and their home directories
-    echo -e "${YELLOW}[*] Deleting lab users...${NC}"
+    echo -e "${YELLOW}[*] Deleting lab users and their home directories...${NC}"
     for i in $(seq 1 $LEVELS); do
         if id "user$i" &>/dev/null; then
             userdel -rf "user$i" 2>/dev/null && echo -e "   - user$i ${GREEN}removed${NC}" || echo -e "   - user$i ${RED}removal failed${NC}"
@@ -69,6 +83,7 @@ cleanup_lab() {
     done
 
     echo -e "\n${GREEN}[✓] Lab cleanup completed successfully.${NC}"
+    echo -e "${YELLOW}[✓] All users, home directories, and lab files have been removed.${NC}"
 }
 
 # --- Check prerequisites (only zsh if selected) ---
@@ -124,11 +139,12 @@ EOF
 create_users() {
     echo -e "\n${YELLOW}[*] Creating lab users...${NC}"
     for i in $(seq 1 $LEVELS); do
-        # Ensure group exists (compatible method)
-        groupadd "user$i" 2>/dev/null || true
-        # Remove old user if exists
+        # Remove old user if exists (including group)
         userdel -rf "user$i" 2>/dev/null || true
-        # Create user with specified shell
+        groupdel "user$i" 2>/dev/null || true
+        
+        # Create group and user
+        groupadd -f "user$i"
         useradd -m -u $((BASE_UID + i)) -g "user$i" -s "$USER_SHELL" "user$i"
         echo "user$i:${PASS[$((i-1))]}" | chpasswd
         chmod 700 "/home/user$i"
@@ -307,7 +323,7 @@ install_lab() {
     done
     echo -e "   ${GREEN}[✓] Shell set to: ${USER_SHELL}${NC}"
 
-    # --- Check prerequisites (only zsh if selected, python not needed) ---
+    # --- Check prerequisites (only zsh if selected) ---
     check_prerequisites
 
     # --- Generate passwords and create users ---
@@ -359,7 +375,7 @@ while true; do
     echo -e "${BLUE}════════════════════════════════════════════════════════════════════${NC}"
     echo -e "  Choose an option:"
     echo -e "    ${GREEN}[1]${NC} Install / Reinstall Lab"
-    echo -e "    ${RED}[2]${NC} Cleanup Lab (Remove everything)"
+    echo -e "    ${RED}[2]${NC} Cleanup Lab (Remove everything - users, homes, files)"
     echo -e "    ${YELLOW}[3]${NC} Exit"
     echo -e "${BLUE}────────────────────────────────────────────────────────────────────${NC}"
     read -rp "  ➜ Enter choice [1-3]: " main_choice
@@ -369,13 +385,7 @@ while true; do
             install_lab
             ;;
         2)
-            echo -e "\n${RED}[!] Are you sure you want to completely remove the lab?${NC}"
-            read -rp "  ➜ Type 'yes' to confirm: " confirm
-            if [[ "$confirm" == "yes" ]]; then
-                cleanup_lab
-            else
-                echo -e "  ${YELLOW}Cleanup cancelled.${NC}"
-            fi
+            cleanup_lab
             ;;
         3)
             echo -e "\n${GREEN}Exiting. Good luck with your training!${NC}"
@@ -386,16 +396,6 @@ while true; do
             ;;
     esac
 done
-
-
-
-
-
-
-
-
-
-
 
 
 
